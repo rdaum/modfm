@@ -1,0 +1,18 @@
+[submodule "third_party/abseil-cpp"]
+	path = third_party/abseil-cpp
+	url = git@github.com:abseil/abseil-cpp.git
+[submodule "third_party/imgui"]
+	path = third_party/imgui
+	url = git@github.com:ocornut/imgui.git
+[submodule "third_party/imgui-plot"]
+	path = third_party/imgui-plot
+	url = git@github.com:soulthreads/imgui-plot.git
+[submodule "third_party/kissfft"]
+	path = third_party/kissfft
+	url = git@github.com:mborgerding/kissfft.git
+[submodule "third_party/portaudio"]
+	path = third_party/portaudio
+	url = git@github.com:PortAudio/portaudio.git
+[submodule "third_party/portmidi"]
+	path = third_party/portmidi
+	url = git@github.com:PortMidi/portmidi.git
