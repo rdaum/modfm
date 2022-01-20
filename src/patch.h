@@ -10,8 +10,8 @@ struct Patch {
     float S_L; // sustain level
     float R_R; // release rate
   };
-  Envelope A_ENV{0.5, 1, 0.5, 0.7, 0.4};
-  Envelope K_ENV{0.5, 1, 0.5, 0.7, 0.4};
+  Envelope A_ENV;
+  Envelope K_ENV;
 
   bool operator==(const Patch &patch) const {
     return C == patch.C && A == patch.A && M == patch.M && K == patch.K && R == patch.R

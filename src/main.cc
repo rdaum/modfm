@@ -29,7 +29,9 @@ int main(int argc, char *argv[]) {
 
   LOG(INFO) << "Good morning.";
 
-  Patch patch{2.0, 0.8, 3.0, 0.5, 1, 0.0};
+  Patch patch{1.0, 0.5, 3.0, 4.0, 1, 0.0,
+              Patch::Envelope{0.025, 0.175, 0.25, 0.75},
+              Patch::Envelope{0.05, 0.33, 0.25, 0.5}};
 
   LOG(INFO) << "Initializing PortAudio";
   PaError err = Pa_Initialize();
