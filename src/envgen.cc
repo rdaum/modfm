@@ -21,7 +21,7 @@ double EnvelopeGenerator::NextSample(const Patch::Envelope &env) {
 void EnvelopeGenerator::CalculateMultiplier(double start_level,
                                             double end_level,
                                             unsigned long long length_in_samples) {
-  multiplier_ = 1.0 + (std::log(end_level) - std::log(start_level)) / (length_in_samples);
+  multiplier_ = 1.0 + (std::log(end_level) - std::log(start_level)) / ((float)length_in_samples);
 }
 
 void EnvelopeGenerator::EnterStage(EnvelopeStage new_stage, const Patch::Envelope &envelope) {
@@ -37,20 +37,24 @@ void EnvelopeGenerator::EnterStage(EnvelopeStage new_stage, const Patch::Envelop
     next_stage_sample_index_ = stage_values[stage_] * sample_rate_;
   }
   switch (new_stage) {
-    case ENVELOPE_STAGE_OFF:current_level_ = 0.0;
+    case ENVELOPE_STAGE_OFF:
+      current_level_ = 0.0;
       multiplier_ = 1.0;
       break;
-    case ENVELOPE_STAGE_ATTACK:current_level_ = minimum_level_;
+    case ENVELOPE_STAGE_ATTACK:
+      current_level_ = minimum_level_;
       CalculateMultiplier(current_level_,
                           1.0,
                           next_stage_sample_index_);
       break;
-    case ENVELOPE_STAGE_DECAY:current_level_ = 1.0;
+    case ENVELOPE_STAGE_DECAY:
+      current_level_ = 1.0;
       CalculateMultiplier(current_level_,
                           fmax(stage_values[ENVELOPE_STAGE_SUSTAIN], minimum_level_),
                           next_stage_sample_index_);
       break;
-    case ENVELOPE_STAGE_SUSTAIN:current_level_ = stage_values[ENVELOPE_STAGE_SUSTAIN];
+    case ENVELOPE_STAGE_SUSTAIN:
+      current_level_ = stage_values[ENVELOPE_STAGE_SUSTAIN];
       multiplier_ = 1.0;
       break;
     case ENVELOPE_STAGE_RELEASE:

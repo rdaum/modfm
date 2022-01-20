@@ -17,16 +17,15 @@ class GUI {
 
   void Start(int x, int y);
   void Stop();
+  bool Running();
 
-  void Wait() {
-    gui_thread_.join();
-  }
+  void Wait();
 
  private:
   void Render();
   void Close();
-  void PlotWave(const size_t buf_size, const float *x_data, const float *y_data1) const;
-  void PlotFFT(const size_t size, const float *x_data, const float *y_data1) const;
+  void PlotWave(size_t buf_size, const float *x_data, const float *y_data1) const;
+  void PlotFFT(size_t size, const float *x_data, const float *y_data1) const;
   void EnvelopeEditor(const std::string &title, Patch::Envelope *envelope) const;
 
   Oscillator oscillator_;
@@ -37,5 +36,4 @@ class GUI {
 
   std::atomic_bool running_;
   GLFWwindow *window_ = nullptr;
-  ImGuiIO *io_;
 };

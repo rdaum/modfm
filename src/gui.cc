@@ -26,14 +26,18 @@ namespace {
 constexpr size_t kAnalysisBufferSize = 512;
 } // namespace
 
-GUI::~GUI() { Close(); }
+GUI::~GUI() {
+  Close();
+}
 
 void glfw_error_callback(int error, const char *description) {
   LOG(ERROR) << "Glfw Error: " << error << " (" << description << ")";
 }
 
 void window_close_callback(GLFWwindow *window) {
-  LOG(ERROR) << "Close";
+  LOG(ERROR) << "Shutting down";
+  auto *gui = static_cast<GUI*>(glfwGetWindowUserPointer(window));
+  gui->Stop();
 }
 
 void GUI::Start(int x, int y) {
@@ -49,21 +53,15 @@ void GUI::Start(int x, int y) {
       glfwSetWindowPos(window_, x, y);
       glfwMakeContextCurrent(window_);
       glfwSwapInterval(1); // Enable vsync
-//      glfwSetWindowUserPointer(window_, system_);
+      glfwSetWindowUserPointer(window_, this);
       glfwSetWindowCloseCallback(window_, window_close_callback);
 
       // Setup Dear ImGui context
       IMGUI_CHECKVERSION();
       ImGui::CreateContext();
-      io_ = &ImGui::GetIO();
-
-      // io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable
-      // Keyboard Controls io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
-      // // Enable Gamepad Controls
 
       // Setup Dear ImGui style
       ImGui::StyleColorsDark();
-      // ImGui::StyleColorsClassic();
 
       // Setup Platform/Renderer bindings
       ImGui_ImplGlfw_InitForOpenGL(window_, true);
@@ -80,20 +78,23 @@ void GUI::Start(int x, int y) {
 }
 
 void GUI::Close() {
+  std::lock_guard<std::mutex> lock(gui_mutex_);
+
   running_ = false;
   if (window_) {
     // Cleanup
-    ImGui_ImplOpenGL2_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
 
     glfwDestroyWindow(window_);
   }
+  window_ = nullptr;
 }
 
 void GUI::Stop() {
+  std::lock_guard<std::mutex> lock(gui_mutex_);
+
   running_ = false;
-  Close();
 }
 
 static void convert_to_freq(kiss_fft_cpx *cout, int n) {
@@ -268,4 +269,14 @@ void GUI::PlotWave(const size_t buf_size, const float *x_data, const float *y_da
   conf.values.count = selection_length;
   conf.line_thickness = 2.f;
   ImGui::Plot("plot2", conf);
+}
+
+void GUI::Wait() {
+  gui_thread_.join();
+}
+
+bool GUI::Running() {
+  std::lock_guard<std::mutex> lock(gui_mutex_);
+
+  return running_;
 }
