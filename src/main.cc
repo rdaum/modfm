@@ -30,8 +30,6 @@ int main(int argc, char *argv[]) {
   LOG(INFO) << "Good morning.";
 
   Patch patch{2.0, 0.8, 3.0, 0.5, 1, 0.0};
-  GUI gui(&patch);
-  Player player(patch, 8, kSampleFrequency);
 
   LOG(INFO) << "Initializing PortAudio";
   PaError err = Pa_Initialize();
@@ -55,12 +53,15 @@ int main(int argc, char *argv[]) {
   audio_params.suggestedLatency = Pa_GetDeviceInfo(audio_params.device)->defaultLowOutputLatency;
   audio_params.hostApiSpecificStreamInfo = nullptr;
 
+  Player player(patch, 8, kSampleFrequency);
+
   PaStream *stream;
   err = Pa_OpenStream(&stream, nullptr, &audio_params,
                       kSampleFrequency, 512, paClipOff, pa_output_callback,
                       &player);
   CHECK(err == paNoError) << "PortAudio error: " << Pa_GetErrorText(err);
 
+  GUI gui(&patch);
   gui.Start(50, 50);
 
   err = Pa_StartStream(stream);
@@ -100,15 +101,12 @@ int main(int argc, char *argv[]) {
     Pm_Read(midi, buffer, 1);
   }
 
-  while (true) {
+  while (gui.Running()) {
     auto length = Pm_Read(midi, buffer, 1);
     if (length) {
       PmMessage status = Pm_MessageStatus(buffer[0].message);
       PmMessage data1 = Pm_MessageData1(buffer[0].message);
       PmMessage data2 = Pm_MessageData2(buffer[0].message);
-//      LOG(INFO) << "GOT: " << buffer[0].timestamp << " " << std::hex << " " <<
-//                status << " " << data1 << " "
-//                << data2;
       auto event_masked = status & 0xf0;
       if (event_masked == 0x90) {
         auto channel = status & 0xf;
@@ -118,7 +116,6 @@ int main(int argc, char *argv[]) {
       } else if (event_masked == 0x80) {
         auto channel = status & 0xf;
         auto note = data1 & 0x7f;
-        auto velocity = data2 & 0x7f;
         player.NoteOff(note);
       }
     }
@@ -126,6 +123,8 @@ int main(int argc, char *argv[]) {
   }
   Pm_Close(midi);
   Pa_CloseStream(stream);
+
+  gui.Wait();
 
   return 0;
 }
