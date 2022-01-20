@@ -1,6 +1,6 @@
 # modfm
 
-This is a simple synthesizer which is an attempt to implement the "Modified Frequency Modulation" algorithm described  Victor Lazzarini and Joseph Timoney in https://mural.maynoothuniversity.ie/4697/1/JAES_V58_6_PG459hirez.pdf
+This is a simple synthesizer which is an attempt to implement the "Modified Frequency Modulation" algorithm described by Victor Lazzarini and Joseph Timoney in their paper @ https://mural.maynoothuniversity.ie/4697/1/JAES_V58_6_PG459hirez.pdf
 
 The ModFM method produces a sound which is less "nasal" than traditional FM (and its phase modulation variant) as the amplitude of the sidebands are said to vary in a more linear fashion.
 
