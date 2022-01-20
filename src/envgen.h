@@ -5,12 +5,12 @@
 
 class EnvelopeGenerator {
  public:
-  EnvelopeGenerator() :
+  EnvelopeGenerator(int sample_rate) :
       minimum_level_(0.0001),
       stage_(ENVELOPE_STAGE_OFF),
       current_level_(minimum_level_),
       multiplier_(1.0),
-      sample_rate_(44100.0),
+      sample_rate_(sample_rate),
       current_sample_index_(0),
       next_stage_sample_index_(0) {
   };
@@ -23,7 +23,7 @@ class EnvelopeGenerator {
     ENVELOPE_STAGE_RELEASE,
     kNumEnvelopeStages
   };
-  void EnterStage(EnvelopeStage new_stage, const Patch::Envelope envelope);
+  void EnterStage(EnvelopeStage new_stage, const Patch::Envelope &envelope);
   double NextSample(const Patch::Envelope &env);
   void SetSampleRate(double newSampleRate);
   inline EnvelopeStage Stage() const { return stage_; };

@@ -4,18 +4,16 @@
 #include <portmidi.h>
 #include <porttime.h>
 
+#include <vector>
+
 #include "oscillator.h"
 #include "envgen.h"
-
-namespace {
-constexpr int kNumVoices = 8;
-}  // namespace
 
 class GUI;
 
 class Player {
  public:
-  explicit Player(const Patch &patch);
+  Player(const Patch &patch, int num_voices, int sample_frequency);
 
   int Perform(const void *in_buffer, void *out_buffer, unsigned long frames_per_buffer,
               const PaStreamCallbackTimeInfo *time_info,
@@ -27,18 +25,19 @@ class Player {
 
  private:
   const Patch &patch_;
-
+  const int num_voices_ = 8;
+  const int sample_frequency_;
   // Track free voices.
   struct Voice {
+    EnvelopeGenerator e_a;
+    EnvelopeGenerator e_k;
     bool on;
     int32_t on_time;
     uint8_t note;
     float velocity;
     float base_freq;
     Oscillator o;
-    EnvelopeGenerator e_a;
-    EnvelopeGenerator e_k;
   };
   // Could probably structure this as a ring buffer in order of note-on instead of using timestamps.
-  Voice voices_[8];
+  std::vector<Voice> voices_;
 };

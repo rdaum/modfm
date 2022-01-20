@@ -5,7 +5,6 @@
 #include <glog/logging.h>
 
 #include "oscillator.h"
-#include "gui.h"
 
 namespace {
 float NoteToFreq(int note) {
@@ -14,9 +13,10 @@ float NoteToFreq(int note) {
 }
 } // namespace
 
-Player::Player(const Patch &patch) : patch_(patch) {
-  for (auto &osc: voices_) {
-    osc.on = false;
+Player::Player(const Patch &patch, int num_voices, int sample_frequency)
+    : patch_(patch), num_voices_(num_voices), sample_frequency_(sample_frequency) {
+  for (int i = 0; i < num_voices; i++) {
+    voices_.push_back(Voice{EnvelopeGenerator(sample_frequency), EnvelopeGenerator(sample_frequency), false /* on */});
   }
 }
 
@@ -26,10 +26,10 @@ int Player::Perform(const void *in_buffer,
                     const PaStreamCallbackTimeInfo *time_info,
                     PaStreamCallbackFlags status_flags) {
   memset(out_buffer, 0, frames_per_buffer * sizeof(float));
-  std::complex<float> mix_buffers[kNumVoices][frames_per_buffer];
+  std::complex<float> mix_buffers[num_voices_][frames_per_buffer];
   memset(mix_buffers, 0, sizeof(mix_buffers));
 
-  for (int vnum = 0; vnum < kNumVoices; vnum++) {
+  for (int vnum = 0; vnum < num_voices_; vnum++) {
     auto &osc = voices_[vnum];
 
     float env_levels_a[frames_per_buffer];
@@ -41,7 +41,7 @@ int Player::Perform(const void *in_buffer,
     }
     // Probably faster without the branch in a loop...
     if (osc.on) {
-      osc.o.Perform(frames_per_buffer, 44100, mix_buffers[vnum], osc.base_freq, patch_,
+      osc.o.Perform(frames_per_buffer, sample_frequency_, mix_buffers[vnum], osc.base_freq, patch_,
                     env_levels_a, env_levels_k);
     }
   }
@@ -50,7 +50,7 @@ int Player::Perform(const void *in_buffer,
   // TODO sucks because it clips.
   std::complex<float> mix_buffer[frames_per_buffer];
   for (int i = 0; i < frames_per_buffer; i++) {
-    for (int onum = 0; onum < kNumVoices; onum++) {
+    for (int onum = 0; onum < num_voices_; onum++) {
       mix_buffer[i] += mix_buffers[onum][i];
     }
   }
@@ -91,7 +91,7 @@ void Player::NoteOn(PmTimestamp ts, uint8_t velocity, uint8_t note) {
   // No free voice? Find the one with the lowest timestamp and steal it.
   PmTimestamp least_ts = ts;
   int stolen_voice_num = 0;
-  for (int i = 0; i < kNumVoices; i++) {
+  for (int i = 0; i < num_voices_; i++) {
     if (voices_[i].on_time < least_ts) {
       stolen_voice_num = i;
       least_ts = voices_[i].on_time;

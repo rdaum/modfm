@@ -24,7 +24,7 @@ void EnvelopeGenerator::CalculateMultiplier(double start_level,
   multiplier_ = 1.0 + (std::log(end_level) - std::log(start_level)) / (length_in_samples);
 }
 
-void EnvelopeGenerator::EnterStage(EnvelopeStage new_stage, const Patch::Envelope envelope) {
+void EnvelopeGenerator::EnterStage(EnvelopeStage new_stage, const Patch::Envelope &envelope) {
   const float stage_values[]{
       0.0f, envelope.A_R, envelope.D_R, envelope.S_L, envelope.R_R
   };
