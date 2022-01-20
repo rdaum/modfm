@@ -6,6 +6,10 @@
 #include "oscillator.h"
 #include "player.h"
 
+namespace {
+constexpr int kSampleFrequency = 44100;
+}  // namespace
+
 DEFINE_bool(listmidi, false, "List available MIDI devices then exit");
 DEFINE_int32(midi, 0, "MIDI device to use for input. If not set, use default.");
 
@@ -27,7 +31,7 @@ int main(int argc, char *argv[]) {
 
   Patch patch{2.0, 0.8, 3.0, 0.5, 1, 0.0};
   GUI gui(&patch);
-  Player player(patch);
+  Player player(patch, 8, kSampleFrequency);
 
   LOG(INFO) << "Initializing PortAudio";
   PaError err = Pa_Initialize();
@@ -53,7 +57,7 @@ int main(int argc, char *argv[]) {
 
   PaStream *stream;
   err = Pa_OpenStream(&stream, nullptr, &audio_params,
-                      44100, 512, paClipOff, pa_output_callback,
+                      kSampleFrequency, 512, paClipOff, pa_output_callback,
                       &player);
   CHECK(err == paNoError) << "PortAudio error: " << Pa_GetErrorText(err);
 
