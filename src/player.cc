@@ -82,8 +82,8 @@ void Player::NoteOn(PmTimestamp ts, uint8_t velocity, uint8_t note) {
       v.on_time = ts;
       v.base_freq = base_freq;
       v.velocity = vel;
-      v.e_a.EnterStage(EnvelopeGenerator::ENVELOPE_STAGE_ATTACK, Patch::Envelope());
-      v.e_k.EnterStage(EnvelopeGenerator::ENVELOPE_STAGE_ATTACK, Patch::Envelope());
+      v.e_a.EnterStage(EnvelopeGenerator::ENVELOPE_STAGE_ATTACK, patch_.A_ENV);
+      v.e_k.EnterStage(EnvelopeGenerator::ENVELOPE_STAGE_ATTACK, patch_.K_ENV);
       return;
     }
   }
@@ -103,8 +103,8 @@ void Player::NoteOn(PmTimestamp ts, uint8_t velocity, uint8_t note) {
   voice.note = note;
   voice.base_freq = base_freq;
   voice.velocity = vel;
-  voice.e_a.EnterStage(EnvelopeGenerator::ENVELOPE_STAGE_ATTACK, Patch::Envelope());
-  voice.e_k.EnterStage(EnvelopeGenerator::ENVELOPE_STAGE_ATTACK, Patch::Envelope());
+  voice.e_a.EnterStage(EnvelopeGenerator::ENVELOPE_STAGE_ATTACK, patch_.A_ENV);
+  voice.e_k.EnterStage(EnvelopeGenerator::ENVELOPE_STAGE_ATTACK, patch_.A_ENV);
 
   // TODO legato, portamento, etc.
 }
@@ -114,7 +114,8 @@ void Player::NoteOff(uint8_t note) {
   for (auto &v: voices_) {
     if (v.on && v.note == note) {
       v.on = false;
-      v.e_a.EnterStage(EnvelopeGenerator::ENVELOPE_STAGE_RELEASE, Patch::Envelope());
+      v.e_a.EnterStage(EnvelopeGenerator::ENVELOPE_STAGE_RELEASE, patch_.A_ENV);
+      v.e_k.EnterStage(EnvelopeGenerator::ENVELOPE_STAGE_RELEASE, patch_.K_ENV);
       return;
     }
   }
