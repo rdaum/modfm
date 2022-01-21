@@ -5,6 +5,7 @@
 #include <porttime.h>
 
 #include <vector>
+#include <mutex>
 
 #include "oscillator.h"
 #include "envgen.h"
@@ -24,6 +25,8 @@ class Player {
   void NoteOff(uint8_t note);
 
  private:
+  std::mutex voices_mutex_;
+
   const Patch &patch_;
   const int num_voices_ = 8;
   const int sample_frequency_;

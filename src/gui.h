@@ -24,9 +24,9 @@ class GUI {
  private:
   void Render();
   void Close();
-  void PlotWave(size_t buf_size, const float *x_data, const float *y_data1) const;
-  void PlotFFT(size_t size, const float *x_data, const float *y_data1) const;
-  void EnvelopeEditor(const std::string &title, Patch::Envelope *envelope) const;
+  static void PlotWave(size_t buf_size, const float *x_data, const float *y_data1) ;
+  static void PlotFFT(size_t size, const float *x_data, const float *y_data1) ;
+  static void EnvelopeEditor(const std::string &title, Patch::Envelope *envelope) ;
 
   Oscillator oscillator_;
   Patch *patch_;

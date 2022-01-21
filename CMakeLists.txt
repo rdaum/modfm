@@ -25,6 +25,8 @@ find_package(OpenGL REQUIRED)
 
 set(CMAKE_CXX_STANDARD 20)
 
+set(CMAKE_CXX_FLAGS_RELEASE "-Ofast")
+
 set(IMGUI_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/imgui)
 add_library(IMGUI STATIC)
 
@@ -47,6 +49,7 @@ target_include_directories(IMGUI
         )
 find_package(OpenGL REQUIRED)
 target_link_libraries(IMGUI PUBLIC ${OPENGL_LIBRARIES})
+
 
 add_executable(modfm src/main.cc
         src/gui.cc
@@ -87,6 +90,7 @@ target_link_libraries(modfm
         gflags
         glfw
         kissfft
+        tbb
         pulse-simple
         imgui_plot
         PortAudio

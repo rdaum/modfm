@@ -12,6 +12,7 @@ constexpr int kSampleFrequency = 44100;
 
 DEFINE_bool(listmidi, false, "List available MIDI devices then exit");
 DEFINE_int32(midi, 0, "MIDI device to use for input. If not set, use default.");
+DEFINE_string(device, "pulse", "Name of audio output device to use");
 
 int pa_output_callback(const void *in_buffer, void *out_buffer, unsigned long frames_per_buffer,
                        const PaStreamCallbackTimeInfo *time_info,
@@ -42,11 +43,12 @@ int main(int argc, char *argv[]) {
     PaDeviceInfo const *info = Pa_GetDeviceInfo(i);
     if (!info) continue;
     std::string name = info->name;
-    if (name == "pulse") {
+    if (name == FLAGS_device) {
       device = i;
+      break;
     }
   }
-  CHECK(device != 0) << "Could not find Pulse device";
+  CHECK(device != 0) << "Could not find device: " << FLAGS_device;
 
   PaStreamParameters audio_params;
   audio_params.device = device;
@@ -61,14 +63,15 @@ int main(int argc, char *argv[]) {
   err = Pa_OpenStream(&stream, nullptr, &audio_params,
                       kSampleFrequency, 512, paClipOff, pa_output_callback,
                       &player);
-  CHECK(err == paNoError) << "PortAudio error: " << Pa_GetErrorText(err);
+  CHECK_EQ(err, paNoError) << "PortAudio error: " << Pa_GetErrorText(err);
 
   GUI gui(&patch);
   gui.Start(50, 50);
 
   err = Pa_StartStream(stream);
-  CHECK(err == paNoError) << "PortAudio error: " << Pa_GetErrorText(err);
+  CHECK_EQ(err, paNoError) << "PortAudio error: " << Pa_GetErrorText(err);
 
+  LOG(INFO) << "Started PortAudio on device #" << audio_params.device;
   if (FLAGS_listmidi) {
     for (int i = 0; i < Pm_CountDevices(); i++) {
       const auto *info = Pm_GetDeviceInfo(i);
@@ -86,6 +89,8 @@ int main(int argc, char *argv[]) {
   }
   CHECK(Pm_GetDeviceInfo(midi_device)) << "Invalid MIDI device: " << midi_device;
 
+  LOG(INFO) << "Started PortMidi with midi device: " << midi_device;
+
   PmStream *midi;
 
   /* start timer, ms accuracy */
@@ -97,34 +102,48 @@ int main(int argc, char *argv[]) {
                                nullptr /* time proc */,
                                nullptr /* time info */
   );
-  /* empty buffer before starting */
-  PmEvent buffer[1];
-  while (Pm_Poll(midi)) {
-    Pm_Read(midi, buffer, 1);
-  }
+  CHECK_EQ(midi_err, pmNoError) << "Unable to open MIDI device: " << Pm_GetErrorText(midi_err);
+
+  LOG(INFO) << "Waiting for MIDI events...";
+
+  std::thread midi_receive_thread([&gui, &midi, &player]{
+    /* empty buffer before starting */
+    PmEvent buffer[256];
+    while (Pm_Poll(midi)) {
+      Pm_Read(midi, buffer, 256);
+    }
+
+    while (gui.Running()) {
+      int length = Pm_Read(midi, buffer, 256);
+      for (int i = 0; i < length; i++) {
+        PmMessage status = Pm_MessageStatus(buffer[i].message);
+        PmMessage data1 = Pm_MessageData1(buffer[i].message);
+        PmMessage data2 = Pm_MessageData2(buffer[i].message);
+        auto event_masked = status & 0xf0;
+        if (event_masked == 0x90) {
+          auto channel = status & 0xf;
+          auto note = data1 & 0x7f;
+          auto velocity = data2 & 0x7f;
+          player.NoteOn(buffer[0].timestamp, velocity, note);
+        } else if (event_masked == 0x80) {
+          auto channel = status & 0xf;
+          auto note = data1 & 0x7f;
+          player.NoteOff(note);
+        }
+      }
+      usleep(50);
+    }
+  });
 
   while (gui.Running()) {
-    auto length = Pm_Read(midi, buffer, 1);
-    if (length) {
-      PmMessage status = Pm_MessageStatus(buffer[0].message);
-      PmMessage data1 = Pm_MessageData1(buffer[0].message);
-      PmMessage data2 = Pm_MessageData2(buffer[0].message);
-      auto event_masked = status & 0xf0;
-      if (event_masked == 0x90) {
-        auto channel = status & 0xf;
-        auto note = data1 & 0x7f;
-        auto velocity = data2 & 0x7f;
-        player.NoteOn(buffer[0].timestamp, velocity, note);
-      } else if (event_masked == 0x80) {
-        auto channel = status & 0xf;
-        auto note = data1 & 0x7f;
-        player.NoteOff(note);
-      }
-    }
-    Pa_Sleep(1);
+    Pa_Sleep(10000);
   }
-  Pm_Close(midi);
-  Pa_CloseStream(stream);
+  midi_receive_thread.join();
+  LOG(INFO) << "Done.";
+  CHECK_EQ(Pm_Close(midi), pmNoError);
+
+  CHECK_EQ(Pa_StopStream(stream), paNoError);
+  CHECK_EQ(Pa_CloseStream(stream), paNoError);
 
   gui.Wait();
 
