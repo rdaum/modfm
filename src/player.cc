@@ -1,6 +1,9 @@
 #include "player.h"
 
 #include <cmath>
+#include <memory>
+#include <execution>
+#include <mutex>
 
 #include <glog/logging.h>
 
@@ -25,34 +28,45 @@ int Player::Perform(const void *in_buffer,
                     unsigned long frames_per_buffer,
                     const PaStreamCallbackTimeInfo *time_info,
                     PaStreamCallbackFlags status_flags) {
+
   memset(out_buffer, 0, frames_per_buffer * sizeof(float));
-  std::complex<float> mix_buffers[num_voices_][frames_per_buffer];
-  memset(mix_buffers, 0, sizeof(mix_buffers));
 
-  for (int vnum = 0; vnum < num_voices_; vnum++) {
-    auto &osc = voices_[vnum];
+  std::mutex buffer_mutex;
+  std::vector<std::unique_ptr<std::complex<float>[]>> mix_buffers;
 
-    float env_levels_a[frames_per_buffer];
-    float env_levels_k[frames_per_buffer];
+  {
+    std::lock_guard<std::mutex> player_lock(voices_mutex_);
 
-    for (int i = 0; i < frames_per_buffer; i++) {
-      env_levels_a[i] = osc.e_a.NextSample(patch_.A_ENV);
-      env_levels_k[i] = osc.e_k.NextSample(patch_.K_ENV);
-    }
-    // Probably faster without the branch in a loop...
-    if (osc.on) {
-      osc.o.Perform(frames_per_buffer, sample_frequency_, mix_buffers[vnum], osc.base_freq, patch_,
-                    env_levels_a, env_levels_k);
-    }
+    std::for_each(std::execution::par_unseq,
+                  voices_.begin(),
+                  voices_.end(),
+                  [frames_per_buffer, this, &mix_buffers, &buffer_mutex](Voice &voice) {
+                    // Probably faster without the branch in a loop...
+                    if (!voice.on) return;
+                    auto mix_buffer = std::make_unique<std::complex<float>[]>(frames_per_buffer);
+                    float env_levels_a[frames_per_buffer];
+                    float env_levels_k[frames_per_buffer];
+
+                    for (int i = 0; i < frames_per_buffer; i++) {
+                      env_levels_a[i] = voice.e_a.NextSample(patch_.A_ENV);
+                      env_levels_k[i] = voice.e_k.NextSample(patch_.K_ENV);
+                    }
+                    voice.o.Perform(frames_per_buffer, sample_frequency_, mix_buffer.get(), voice.base_freq, patch_,
+                                    env_levels_a, env_levels_k);
+                    {
+                      std::lock_guard<std::mutex> buffer_lock(buffer_mutex);
+                      mix_buffers.push_back(std::move(mix_buffer));
+                    }
+                  });
   }
 
   // Mix down.
-  // TODO sucks because it clips.
   std::complex<float> mix_buffer[frames_per_buffer];
-  for (int i = 0; i < frames_per_buffer; i++) {
-    for (int onum = 0; onum < num_voices_; onum++) {
-      mix_buffer[i] += mix_buffers[onum][i];
-    }
+  for (auto &v_buffer: mix_buffers) {
+    if (v_buffer)
+      for (int i = 0; i < frames_per_buffer; i++) {
+        mix_buffer[i] += v_buffer.get()[i];
+      }
   }
 
   auto *f_buffer = (float *) out_buffer;
@@ -63,6 +77,8 @@ int Player::Perform(const void *in_buffer,
 }
 
 void Player::NoteOn(PmTimestamp ts, uint8_t velocity, uint8_t note) {
+  std::lock_guard<std::mutex> player_lock(voices_mutex_);
+
   // A note with no velocity is not a note at all.
   if (!velocity) return;
 
@@ -110,6 +126,8 @@ void Player::NoteOn(PmTimestamp ts, uint8_t velocity, uint8_t note) {
 }
 
 void Player::NoteOff(uint8_t note) {
+  std::lock_guard<std::mutex> player_lock(voices_mutex_);
+
   // Find the oscillator playing this and turn it off.
   for (auto &v: voices_) {
     if (v.on && v.note == note) {

@@ -130,49 +130,51 @@ void GUI::Render() {
   EnvelopeEditor("Amplitude Envelope", &patch_->A_ENV);
   EnvelopeEditor("Modulator Level Envelope", &patch_->K_ENV);
 
-  static float x_data[kAnalysisBufferSize];
-  static std::complex<float> c_buf_data[kAnalysisBufferSize];
-  static float buf_data[kAnalysisBufferSize];
-  static bool first = true;
-  if (*patch_ != old || first) {
-    first = false;
-    oscillator_.Reset();
-    float e_c[kAnalysisBufferSize];
-    for (int i = 0; i < kAnalysisBufferSize; i++) {
-      e_c[i] = 1.0f;
-    }
-    oscillator_.Perform(kAnalysisBufferSize, 44100, c_buf_data, 440, *patch_, e_c, e_c);
-    for (int i = 0; i < kAnalysisBufferSize; i++) {
-      buf_data[i] = c_buf_data[i].real();
-    }
-  }
+  if (ImGui::Begin("Wave", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
 
-  ImGui::Begin("Wave", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
-  PlotWave(kAnalysisBufferSize, x_data, buf_data);
-  ImGui::End();
-
-  if (ImGui::Begin("FFT", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-    static float fft_o[kAnalysisBufferSize];
-    static float fft_x[kAnalysisBufferSize];
+    static float x_data[kAnalysisBufferSize];
+    static std::complex<float> c_buf_data[kAnalysisBufferSize];
+    static float buf_data[kAnalysisBufferSize];
+    static bool first = true;
     if (*patch_ != old || first) {
       first = false;
+      oscillator_.Reset();
+      float e_c[kAnalysisBufferSize];
+      for (int i = 0; i < kAnalysisBufferSize; i++) {
+        e_c[i] = 1.0f;
+      }
+      oscillator_.Perform(kAnalysisBufferSize, 44100, c_buf_data, 440, *patch_, e_c, e_c);
+      for (int i = 0; i < kAnalysisBufferSize; i++) {
+        buf_data[i] = c_buf_data[i].real();
+      }
     }
-    kiss_fft_cfg cfg = kiss_fft_alloc(kAnalysisBufferSize, false, nullptr, 0);
-    kiss_fft_cpx cx_in[kAnalysisBufferSize];
-    for (int i = 0; i < kAnalysisBufferSize; i++) {
-      cx_in[i].r = c_buf_data[i].real();
-      cx_in[i].i = c_buf_data[i].imag();
-    }
-    kiss_fft_cpx cx_out[kAnalysisBufferSize];
-    kiss_fft(cfg, cx_in, cx_out);
-    convert_to_freq(cx_out, kAnalysisBufferSize);
-    for (size_t i = 0; i < kAnalysisBufferSize; ++i) {
-      fft_o[i] = cx_out[i].r;
-      fft_x[i] = i;
-    }
-    kiss_fft_free(cfg);
-    PlotFFT(kAnalysisBufferSize, fft_x, fft_o);
+
+    PlotWave(kAnalysisBufferSize, x_data, buf_data);
     ImGui::End();
+
+    if (ImGui::Begin("FFT", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+      static float fft_o[kAnalysisBufferSize];
+      static float fft_x[kAnalysisBufferSize];
+      if (*patch_ != old || first) {
+        first = false;
+      }
+      kiss_fft_cfg cfg = kiss_fft_alloc(kAnalysisBufferSize, false, nullptr, 0);
+      kiss_fft_cpx cx_in[kAnalysisBufferSize];
+      for (int i = 0; i < kAnalysisBufferSize; i++) {
+        cx_in[i].r = c_buf_data[i].real();
+        cx_in[i].i = c_buf_data[i].imag();
+      }
+      kiss_fft_cpx cx_out[kAnalysisBufferSize];
+      kiss_fft(cfg, cx_in, cx_out);
+      convert_to_freq(cx_out, kAnalysisBufferSize);
+      for (size_t i = 0; i < kAnalysisBufferSize; ++i) {
+        fft_o[i] = cx_out[i].r;
+        fft_x[i] = i;
+      }
+      kiss_fft_free(cfg);
+      PlotFFT(kAnalysisBufferSize, fft_x, fft_o);
+      ImGui::End();
+    }
   }
 
   ImGui::EndFrame();
@@ -198,7 +200,8 @@ void GUI::Render() {
   glfwSwapBuffers(window_);
 }
 
-void GUI::EnvelopeEditor(const std::string &title, Patch::Envelope *envelope) const {
+// static
+void GUI::EnvelopeEditor(const std::string &title, Patch::Envelope *envelope) {
   ImGui::Begin(title.c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize);
 
   ImGui::SliderFloat("Attack rate", &envelope->A_R, 0.0f, 1.0f, "%.3f");
@@ -209,7 +212,8 @@ void GUI::EnvelopeEditor(const std::string &title, Patch::Envelope *envelope) co
   ImGui::End();
 }
 
-void GUI::PlotFFT(const size_t size, const float *x_data, const float *y_data1) const {
+// static
+void GUI::PlotFFT(const size_t size, const float *x_data, const float *y_data1) {
   ImGui::PlotConfig conf;
   const float *y_data[] = {y_data1};
   ImU32 colors[3] = {ImColor(0, 255, 0)};
@@ -233,7 +237,8 @@ void GUI::PlotFFT(const size_t size, const float *x_data, const float *y_data1) 
   ImGui::Plot("plot1", conf);
 }
 
-void GUI::PlotWave(const size_t buf_size, const float *x_data, const float *y_data1) const {
+// static
+void GUI::PlotWave(const size_t buf_size, const float *x_data, const float *y_data1) {
   ImGui::PlotConfig conf;
   const float *y_data[] = {y_data1};
   ImU32 colors[3] = {ImColor(0, 255, 0), ImColor(255, 0, 0), ImColor(0, 0, 255)};

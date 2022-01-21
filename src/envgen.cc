@@ -3,14 +3,14 @@
 // originally based on http://www.martin-finke.de/blog/articles/audio-plugins-011-envelopes/
 // TODO: too much branching in loops, need to be able to set levels (not just rates), more stages, velocity & aftertouch
 
-double EnvelopeGenerator::NextSample(const Patch::Envelope &env) {
+float EnvelopeGenerator::NextSample(const Patch::Envelope &env) {
   if (stage_ != ENVELOPE_STAGE_OFF &&
       stage_ != ENVELOPE_STAGE_SUSTAIN) {
     if (current_sample_index_ == next_stage_sample_index_) {
-      EnvelopeStage newStage = static_cast<EnvelopeStage>(
+      auto new_stage = static_cast<EnvelopeStage>(
           (stage_ + 1) % kNumEnvelopeStages
       );
-      EnterStage(newStage, env);
+      EnterStage(new_stage, env);
     }
     current_level_ *= multiplier_;
     current_sample_index_++;
@@ -18,10 +18,10 @@ double EnvelopeGenerator::NextSample(const Patch::Envelope &env) {
   return current_level_;
 }
 
-void EnvelopeGenerator::CalculateMultiplier(double start_level,
-                                            double end_level,
+void EnvelopeGenerator::CalculateMultiplier(float start_level,
+                                            float end_level,
                                             unsigned long long length_in_samples) {
-  multiplier_ = 1.0 + (std::log(end_level) - std::log(start_level)) / ((float)length_in_samples);
+  multiplier_ = 1.0f + (std::log(end_level) - std::log(start_level)) / ((float)length_in_samples);
 }
 
 void EnvelopeGenerator::EnterStage(EnvelopeStage new_stage, const Patch::Envelope &envelope) {
@@ -38,24 +38,24 @@ void EnvelopeGenerator::EnterStage(EnvelopeStage new_stage, const Patch::Envelop
   }
   switch (new_stage) {
     case ENVELOPE_STAGE_OFF:
-      current_level_ = 0.0;
-      multiplier_ = 1.0;
+      current_level_ = 0.0f;
+      multiplier_ = 1.0f;
       break;
     case ENVELOPE_STAGE_ATTACK:
       current_level_ = minimum_level_;
       CalculateMultiplier(current_level_,
-                          1.0,
+                          1.0f,
                           next_stage_sample_index_);
       break;
     case ENVELOPE_STAGE_DECAY:
-      current_level_ = 1.0;
+      current_level_ = 1.0f;
       CalculateMultiplier(current_level_,
-                          fmax(stage_values[ENVELOPE_STAGE_SUSTAIN], minimum_level_),
+                          std::fmax(stage_values[ENVELOPE_STAGE_SUSTAIN], minimum_level_),
                           next_stage_sample_index_);
       break;
     case ENVELOPE_STAGE_SUSTAIN:
       current_level_ = stage_values[ENVELOPE_STAGE_SUSTAIN];
-      multiplier_ = 1.0;
+      multiplier_ = 1.0f;
       break;
     case ENVELOPE_STAGE_RELEASE:
       // We could go from ATTACK/DECAY to RELEASE,
@@ -64,11 +64,12 @@ void EnvelopeGenerator::EnterStage(EnvelopeStage new_stage, const Patch::Envelop
                           minimum_level_,
                           next_stage_sample_index_);
       break;
-    default:break;
+    default:
+      break;
   }
 }
 
-void EnvelopeGenerator::SetSampleRate(double newSampleRate) {
+void EnvelopeGenerator::SetSampleRate(float newSampleRate) {
   sample_rate_ = newSampleRate;
 }
 
