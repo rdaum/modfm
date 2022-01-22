@@ -2,17 +2,20 @@
 
 #include <cmath>
 
+namespace {
+constexpr std::complex<float> kCpi = M_PI;
+}  // namespace
+
 void Oscillator::Perform(size_t buffer_size,
                          uint16_t sample_rate,
                          std::complex<float> buffer[],
                          float base_freq,
-                         const Patch &patch,
+                         const GeneratorPatch &patch,
                          const float level_a[], const float level_k[]) {
   std::complex<float> c_sample_rate = sample_rate;
   std::complex<float> freq = base_freq * patch.C;
-  std::complex<float> c_pi = M_PI;
-  std::complex<float> omega_c = 2.0f * c_pi * freq;
-  std::complex<float> omega_m = 2.0f * c_pi * (patch.M * base_freq);
+  std::complex<float> omega_c = 2.0f * kCpi * freq;
+  std::complex<float> omega_m = 2.0f * kCpi * (patch.M * freq);
   std::complex<float> S = std::complex<float>(0, patch.S);
 
   for (size_t i = 0; i < buffer_size; i++) {

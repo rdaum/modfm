@@ -2,6 +2,7 @@
 #include <gflags/gflags.h>
 #include <GLFW/glfw3.h>
 
+#include "midi.h"
 #include "gui.h"
 #include "oscillator.h"
 #include "player.h"
@@ -10,7 +11,6 @@ namespace {
 constexpr int kSampleFrequency = 44100;
 }  // namespace
 
-DEFINE_bool(listmidi, false, "List available MIDI devices then exit");
 DEFINE_int32(midi, 0, "MIDI device to use for input. If not set, use default.");
 DEFINE_string(device, "pulse", "Name of audio output device to use");
 
@@ -30,9 +30,7 @@ int main(int argc, char *argv[]) {
 
   LOG(INFO) << "Good morning.";
 
-  Patch patch{1.0, 0.5, 3.0, 4.0, 1, 0.0,
-              Patch::Envelope{0.025, 0.175, 0.25, 0.75},
-              Patch::Envelope{0.05, 0.33, 0.25, 0.5}};
+  Patch patch{{GeneratorPatch::Default()}};
 
   LOG(INFO) << "Initializing PortAudio";
   PaError err = Pa_Initialize();
@@ -65,87 +63,42 @@ int main(int argc, char *argv[]) {
                       &player);
   CHECK_EQ(err, paNoError) << "PortAudio error: " << Pa_GetErrorText(err);
 
-  GUI gui(&patch);
+  // Set up the midi receiver and open the default device or what was passed in.
+  MIDIReceiver midi_receiver;
+  if (FLAGS_midi)
+    CHECK(midi_receiver.OpenDevice(FLAGS_midi).ok()) << "Unable to open MIDI device";
+  else
+    CHECK(midi_receiver.OpenDefaultDevice().ok()) << "Unable to open MIDI device";
+
+  // Wire in note on / off events to the player.
+  midi_receiver.NoteOffSignal.connect(&Player::NoteOff, &player);
+  midi_receiver.NoteOnSignal.connect(&Player::NoteOn, &player);
+
+  GUI gui(&patch, &midi_receiver);
   gui.Start(50, 50);
 
   err = Pa_StartStream(stream);
   CHECK_EQ(err, paNoError) << "PortAudio error: " << Pa_GetErrorText(err);
 
   LOG(INFO) << "Started PortAudio on device #" << audio_params.device;
-  if (FLAGS_listmidi) {
-    for (int i = 0; i < Pm_CountDevices(); i++) {
-      const auto *info = Pm_GetDeviceInfo(i);
-      if (info->input) {
-        LOG(INFO) << "Input device: #" << i << ": " << info->name
-                  << (i == Pm_GetDefaultInputDeviceID() ? " (default)" : "");
-      }
-    }
-    return 0;
-  }
-
-  PmDeviceID midi_device = Pm_GetDefaultInputDeviceID();
-  if (FLAGS_midi != 0) {
-    midi_device = FLAGS_midi;
-  }
-  CHECK(Pm_GetDeviceInfo(midi_device)) << "Invalid MIDI device: " << midi_device;
-
-  LOG(INFO) << "Started PortMidi with midi device: " << midi_device;
-
-  PmStream *midi;
 
   /* start timer, ms accuracy */
   Pt_Start(1, nullptr, nullptr);
 
-  auto midi_err = Pm_OpenInput(&midi, midi_device,
-                               nullptr,
-                               100 /* input buffer size */,
-                               nullptr /* time proc */,
-                               nullptr /* time info */
-  );
-  CHECK_EQ(midi_err, pmNoError) << "Unable to open MIDI device: " << Pm_GetErrorText(midi_err);
-
-  LOG(INFO) << "Waiting for MIDI events...";
-
-  std::thread midi_receive_thread([&gui, &midi, &player]{
-    /* empty buffer before starting */
-    PmEvent buffer[256];
-    while (Pm_Poll(midi)) {
-      Pm_Read(midi, buffer, 256);
-    }
-
-    while (gui.Running()) {
-      int length = Pm_Read(midi, buffer, 256);
-      for (int i = 0; i < length; i++) {
-        PmMessage status = Pm_MessageStatus(buffer[i].message);
-        PmMessage data1 = Pm_MessageData1(buffer[i].message);
-        PmMessage data2 = Pm_MessageData2(buffer[i].message);
-        auto event_masked = status & 0xf0;
-        if (event_masked == 0x90) {
-          auto channel = status & 0xf;
-          auto note = data1 & 0x7f;
-          auto velocity = data2 & 0x7f;
-          player.NoteOn(buffer[0].timestamp, velocity, note);
-        } else if (event_masked == 0x80) {
-          auto channel = status & 0xf;
-          auto note = data1 & 0x7f;
-          player.NoteOff(note);
-        }
-      }
-      usleep(50);
-    }
-  });
-
+  CHECK(midi_receiver.Start().ok()) << "Unable to start MIDI device";
   while (gui.Running()) {
     Pa_Sleep(10000);
   }
-  midi_receive_thread.join();
-  LOG(INFO) << "Done.";
-  CHECK_EQ(Pm_Close(midi), pmNoError);
+  LOG(INFO) << "Closing...";
+  CHECK(midi_receiver.Close().ok()) << "Unable to close MIDI device";
+  CHECK(midi_receiver.Stop().ok()) << "Unable to stop MIDI device";
 
   CHECK_EQ(Pa_StopStream(stream), paNoError);
   CHECK_EQ(Pa_CloseStream(stream), paNoError);
 
   gui.Wait();
+
+  LOG(INFO) << "Done.";
 
   return 0;
 }

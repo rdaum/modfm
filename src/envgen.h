@@ -23,8 +23,8 @@ class EnvelopeGenerator {
     ENVELOPE_STAGE_RELEASE,
     kNumEnvelopeStages
   };
-  void EnterStage(EnvelopeStage new_stage, const Patch::Envelope &envelope);
-  float NextSample(const Patch::Envelope &env);
+  void EnterStage(EnvelopeStage new_stage, const GeneratorPatch::Envelope &envelope);
+  float NextSample(const GeneratorPatch::Envelope &env);
   void SetSampleRate(float newSampleRate);
   inline EnvelopeStage Stage() const { return stage_; };
   const float minimum_level_;
