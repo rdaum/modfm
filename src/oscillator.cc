@@ -10,7 +10,7 @@ void Oscillator::Perform(size_t buffer_size,
                          uint16_t sample_rate,
                          std::complex<float> buffer[],
                          float base_freq,
-                         const Patch &patch,
+                         const GeneratorPatch &patch,
                          const float level_a[], const float level_k[]) {
   std::complex<float> c_sample_rate = sample_rate;
   std::complex<float> freq = base_freq * patch.C;

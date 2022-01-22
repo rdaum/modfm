@@ -58,29 +58,28 @@ add_executable(modfm src/main.cc
         src/player.h
         src/player.cc
         src/patch.h
+        src/midi.h
+        src/midi.cc
         src/envgen.h
         src/envgen.cc)
 
 add_subdirectory(third_party/abseil-cpp)
 include_directories(${IMGUI_DIR})
 add_subdirectory(third_party/imgui-plot)
-set(KISSFFT_TOOLS OFF)
-set(KISSFFT_TEST OFF)
-set(KISSFFT_DATATYPE float)
-add_subdirectory(third_party/kissfft)
 add_subdirectory(third_party/portaudio)
 add_subdirectory(third_party/portmidi)
+add_subdirectory(third_party/sigslot)
 
 target_include_directories(modfm PRIVATE
         third_party/imgui-plot/include
-        third_party/kissfft
+        third_party/sigslot
         third_party/portaudio/include
         third_party/portmidi/porttime
         third_party/portmidi/pm_common)
 if (WIN32)
     set(PLATFORM_LIBRARIES})
 else ()
-    set(PLATFORM_LIBRARIES pthread rt GL glfw)
+    set(PLATFORM_LIBRARIES pthread rt GL glfw tbb)
 endif ()
 
 target_link_libraries(modfm
@@ -89,10 +88,9 @@ target_link_libraries(modfm
         glog::glog
         gflags
         glfw
-        kissfft
-        tbb
         pulse-simple
         imgui_plot
         PortAudio
+        Pal::Sigslot
         portmidi
         absl::statusor)

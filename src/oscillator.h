@@ -13,7 +13,7 @@ class Oscillator {
                uint16_t sample_rate,
                std::complex<float> buffer[],
                float freq,
-               const Patch &patch,
+               const GeneratorPatch &patch,
                const float level_a[], const float level_k[]);
 
   void Reset() { x_ = 0.0f; }

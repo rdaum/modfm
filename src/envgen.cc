@@ -3,7 +3,7 @@
 // originally based on http://www.martin-finke.de/blog/articles/audio-plugins-011-envelopes/
 // TODO: too much branching in loops, need to be able to set levels (not just rates), more stages, velocity & aftertouch
 
-float EnvelopeGenerator::NextSample(const Patch::Envelope &env) {
+float EnvelopeGenerator::NextSample(const GeneratorPatch::Envelope &env) {
   if (stage_ != ENVELOPE_STAGE_OFF &&
       stage_ != ENVELOPE_STAGE_SUSTAIN) {
     if (current_sample_index_ == next_stage_sample_index_) {
@@ -24,7 +24,7 @@ void EnvelopeGenerator::CalculateMultiplier(float start_level,
   multiplier_ = 1.0f + (std::log(end_level) - std::log(start_level)) / ((float)length_in_samples);
 }
 
-void EnvelopeGenerator::EnterStage(EnvelopeStage new_stage, const Patch::Envelope &envelope) {
+void EnvelopeGenerator::EnterStage(EnvelopeStage new_stage, const GeneratorPatch::Envelope &envelope) {
   const float stage_values[]{
       0.0f, envelope.A_R, envelope.D_R, envelope.S_L, envelope.R_R
   };

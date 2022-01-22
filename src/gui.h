@@ -8,11 +8,12 @@
 #include <mutex>
 #include <atomic>
 
-#include "oscillator.h"
+#include "patch.h"
 
+class MIDIReceiver;
 class GUI {
  public:
-  explicit GUI(Patch *patch) : patch_(patch) {}
+  GUI(Patch *patch, MIDIReceiver *midi_receiver) : patch_(patch), midi_receiver_(midi_receiver) {}
   ~GUI();
 
   void Start(int x, int y);
@@ -25,11 +26,10 @@ class GUI {
   void Render();
   void Close();
   static void PlotWave(size_t buf_size, const float *x_data, const float *y_data1) ;
-  static void PlotFFT(size_t size, const float *x_data, const float *y_data1) ;
-  static void EnvelopeEditor(const std::string &title, Patch::Envelope *envelope) ;
+  static void EnvelopeEditor(const std::string &title, GeneratorPatch::Envelope *envelope) ;
 
-  Oscillator oscillator_;
   Patch *patch_;
+  MIDIReceiver *midi_receiver_;
 
   std::mutex gui_mutex_;
   std::thread gui_thread_;
