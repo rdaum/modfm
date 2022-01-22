@@ -1,9 +1,9 @@
-#include <glog/logging.h>
-#include <gflags/gflags.h>
 #include <GLFW/glfw3.h>
+#include <gflags/gflags.h>
+#include <glog/logging.h>
 
-#include "midi.h"
 #include "gui.h"
+#include "midi.h"
 #include "oscillator.h"
 #include "player.h"
 
@@ -14,11 +14,13 @@ constexpr int kSampleFrequency = 44100;
 DEFINE_int32(midi, 0, "MIDI device to use for input. If not set, use default.");
 DEFINE_string(device, "pulse", "Name of audio output device to use");
 
-int pa_output_callback(const void *in_buffer, void *out_buffer, unsigned long frames_per_buffer,
+int pa_output_callback(const void *in_buffer, void *out_buffer,
+                       unsigned long frames_per_buffer,
                        const PaStreamCallbackTimeInfo *time_info,
                        PaStreamCallbackFlags status_flags, void *user_data) {
-  auto *player = (Player *) user_data;
-  return player->Perform(in_buffer, out_buffer, frames_per_buffer, time_info, status_flags);
+  auto *player = (Player *)user_data;
+  return player->Perform(in_buffer, out_buffer, frames_per_buffer, time_info,
+                         status_flags);
 }
 
 int main(int argc, char *argv[]) {
@@ -52,23 +54,25 @@ int main(int argc, char *argv[]) {
   audio_params.device = device;
   audio_params.channelCount = 1;
   audio_params.sampleFormat = paFloat32;
-  audio_params.suggestedLatency = Pa_GetDeviceInfo(audio_params.device)->defaultLowOutputLatency;
+  audio_params.suggestedLatency =
+      Pa_GetDeviceInfo(audio_params.device)->defaultLowOutputLatency;
   audio_params.hostApiSpecificStreamInfo = nullptr;
 
-  Player player(patch, 8, kSampleFrequency);
+  Player player(&patch, 8, kSampleFrequency);
 
   PaStream *stream;
-  err = Pa_OpenStream(&stream, nullptr, &audio_params,
-                      kSampleFrequency, 512, paClipOff, pa_output_callback,
-                      &player);
+  err = Pa_OpenStream(&stream, nullptr, &audio_params, kSampleFrequency, 512,
+                      paClipOff, pa_output_callback, &player);
   CHECK_EQ(err, paNoError) << "PortAudio error: " << Pa_GetErrorText(err);
 
   // Set up the midi receiver and open the default device or what was passed in.
   MIDIReceiver midi_receiver;
   if (FLAGS_midi)
-    CHECK(midi_receiver.OpenDevice(FLAGS_midi).ok()) << "Unable to open MIDI device";
+    CHECK(midi_receiver.OpenDevice(FLAGS_midi).ok())
+        << "Unable to open MIDI device";
   else
-    CHECK(midi_receiver.OpenDefaultDevice().ok()) << "Unable to open MIDI device";
+    CHECK(midi_receiver.OpenDefaultDevice().ok())
+        << "Unable to open MIDI device";
 
   // Wire in note on / off events to the player.
   midi_receiver.NoteOffSignal.connect(&Player::NoteOff, &player);

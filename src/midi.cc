@@ -3,11 +3,11 @@
 #include <absl/strings/str_format.h>
 #include <glog/logging.h>
 
-
 #include "player.h"
 
-std::vector<std::pair<PmDeviceID , const PmDeviceInfo*>> MIDIReceiver::ListDevices() const {
-  std::vector<std::pair<PmDeviceID , const PmDeviceInfo*>> devices;
+std::vector<std::pair<PmDeviceID, const PmDeviceInfo *>>
+MIDIReceiver::ListDevices() const {
+  std::vector<std::pair<PmDeviceID, const PmDeviceInfo *>> devices;
   for (int i = 0; i < Pm_CountDevices(); i++) {
     const auto *info = Pm_GetDeviceInfo(i);
     if (info->input) {
@@ -17,28 +17,33 @@ std::vector<std::pair<PmDeviceID , const PmDeviceInfo*>> MIDIReceiver::ListDevic
   return devices;
 }
 
-absl::StatusOr<const PmDeviceInfo*> MIDIReceiver::OpenDevice(PmDeviceID midi_device) {
+absl::StatusOr<const PmDeviceInfo *> MIDIReceiver::OpenDevice(
+    PmDeviceID midi_device) {
   if (open_) {
-    return absl::Status(absl::StatusCode::kFailedPrecondition, "Device already open. Close first.");
+    return absl::Status(absl::StatusCode::kFailedPrecondition,
+                        "Device already open. Close first.");
   }
   if (running_) {
-    return absl::Status(absl::StatusCode::kFailedPrecondition, "MIDI receiver is running. Stop and close first.");
+    return absl::Status(absl::StatusCode::kFailedPrecondition,
+                        "MIDI receiver is running. Stop and close first.");
   }
 
   auto *device_info = Pm_GetDeviceInfo(midi_device);
   if (device_info == nullptr) {
-    return absl::Status(absl::StatusCode::kNotFound, absl::StrFormat("Unable to get device info for MIDI device %d", midi_device));
+    return absl::Status(
+        absl::StatusCode::kNotFound,
+        absl::StrFormat("Unable to get device info for MIDI device %d",
+                        midi_device));
   }
 
-  auto midi_err = Pm_OpenInput(&midi_stream_, midi_device,
-                               nullptr,
+  auto midi_err = Pm_OpenInput(&midi_stream_, midi_device, nullptr,
                                100 /* input buffer size */,
-                               nullptr /* time proc */,
-                               nullptr /* time info */
+                               nullptr /* time proc */, nullptr /* time info */
   );
   if (midi_err != pmNoError) {
     return absl::Status(absl::StatusCode::kNotFound,
-                        absl::StrFormat("Unable to open MIDI device: %s", Pm_GetErrorText(midi_err)));
+                        absl::StrFormat("Unable to open MIDI device: %s",
+                                        Pm_GetErrorText(midi_err)));
   }
 
   midi_device_ = midi_device;
@@ -56,15 +61,17 @@ absl::StatusOr<const PmDeviceInfo *> MIDIReceiver::OpenDefaultDevice() {
 
 absl::Status MIDIReceiver::Start() {
   if (running_) {
-    return absl::Status(absl::StatusCode::kFailedPrecondition, "Already running");
+    return absl::Status(absl::StatusCode::kFailedPrecondition,
+                        "Already running");
   }
   if (!open_) {
-    return absl::Status(absl::StatusCode::kFailedPrecondition, "Device not open");
+    return absl::Status(absl::StatusCode::kFailedPrecondition,
+                        "Device not open");
   }
 
   LOG(INFO) << "Starting MIDI receiver...";
 
-  receive_thread_ = std::thread([this]{
+  receive_thread_ = std::thread([this] {
     running_ = true;
     /* empty buffer before starting */
     PmEvent buffer[256];
@@ -114,15 +121,19 @@ absl::Status MIDIReceiver::Stop() {
 
 absl::Status MIDIReceiver::Close() {
   if (running_) {
-    return absl::Status(absl::StatusCode::kFailedPrecondition, "Currently running. Stop before closing.");
+    return absl::Status(absl::StatusCode::kFailedPrecondition,
+                        "Currently running. Stop before closing.");
   }
   if (!open_) {
-    return absl::Status(absl::StatusCode::kFailedPrecondition, "Device not open");
+    return absl::Status(absl::StatusCode::kFailedPrecondition,
+                        "Device not open");
   }
 
   auto pm_err = Pm_Close(midi_stream_);
   if (pm_err != pmNoError) {
-    return absl::Status(absl::StatusCode::kInternal, absl::StrFormat("Unable to close device: %s", Pm_GetErrorText(pm_err)));
+    return absl::Status(
+        absl::StatusCode::kInternal,
+        absl::StrFormat("Unable to close device: %s", Pm_GetErrorText(pm_err)));
   }
 
   LOG(INFO) << "Closed MIDI device: " << midi_device_;

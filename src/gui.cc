@@ -1,34 +1,31 @@
 #include "gui.h"
 
-#include <cmath>
-#include <thread>
-#include <mutex>
-#include <complex>
-#include <absl/strings/str_format.h>
-
-#include <glog/logging.h>
-#include <gflags/gflags.h>
-
 #include <GLFW/glfw3.h>
+#include <absl/strings/str_format.h>
+#include <gflags/gflags.h>
+#include <glog/logging.h>
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl2.h>
 #include <imgui_plot.h>
+
+#include <cmath>
+#include <complex>
+#include <mutex>
+#include <thread>
 #ifndef IMGUI_DEFINE_MATH_OPERATORS
 #define IMGUI_DEFINE_MATH_OPERATORS
 #endif
 #include <imgui_internal.h>
 
-#include "oscillator.h"
 #include "midi.h"
+#include "oscillator.h"
 
 namespace {
 constexpr size_t kAnalysisBufferSize = 256;
-} // namespace
+}  // namespace
 
-GUI::~GUI() {
-  Close();
-}
+GUI::~GUI() { Close(); }
 
 void glfw_error_callback(int error, const char *description) {
   LOG(ERROR) << "Glfw Error: " << error << " (" << description << ")";
@@ -54,7 +51,7 @@ void GUI::Start(int x, int y) {
       CHECK(window_);
       glfwSetWindowPos(window_, x, y);
       glfwMakeContextCurrent(window_);
-      glfwSwapInterval(1); // Enable vsync
+      glfwSwapInterval(1);  // Enable vsync
       glfwSetWindowUserPointer(window_, this);
       glfwSetWindowCloseCallback(window_, window_close_callback);
 
@@ -114,18 +111,23 @@ void GUI::Render() {
     char current_device_name[80] = "None";
     if (current_device) {
       std::strncpy(current_device_name,
-                   absl::StrFormat("%s (%d)", current_device->name, midi_receiver_->CurrentDeviceID()).c_str(),
+                   absl::StrFormat("%s (%d)", current_device->name,
+                                   midi_receiver_->CurrentDeviceID())
+                       .c_str(),
                    80);
     }
     if (ImGui::BeginCombo("Input device", current_device_name)) {
       auto devices = midi_receiver_->ListDevices();
-      for (const auto &device: devices) {
+      for (const auto &device : devices) {
         bool is_selected;
-        if (ImGui::Selectable(absl::StrFormat("%s (%d)", device.second->name, device.first).c_str(),
-                              &is_selected)) {
+        if (ImGui::Selectable(
+                absl::StrFormat("%s (%d)", device.second->name, device.first)
+                    .c_str(),
+                &is_selected)) {
           CHECK(midi_receiver_->Stop().ok());
           CHECK(midi_receiver_->Close().ok());
-          CHECK(midi_receiver_->OpenDevice(device.first).ok()) << "Unable to open device: " << device.first;
+          CHECK(midi_receiver_->OpenDevice(device.first).ok())
+              << "Unable to open device: " << device.first;
           CHECK(midi_receiver_->Start().ok());
         }
         if (is_selected) ImGui::SetItemDefaultFocus();
@@ -139,31 +141,18 @@ void GUI::Render() {
     int g_num = 0;
     auto &generators = patch_->generators;
     // TODO: re-enable once proper multi-generator patching is working
-//    if (ImGui::Button("+")) {
-//      generators.
-//          push_back(std::move(GeneratorPatch::Default())
-//      );
-//    }
+    if (ImGui::Button("+")) {
+      patch_->AddGenerator();
+    }
 
     unsigned long num_generators = generators.size();
     bool active[num_generators];
-    memset(active,
-           true, sizeof(active));
-    for (
-      auto &g
-        : generators) {
-
-      if (
-          ImGui::CollapsingHeader(absl::StrFormat("Generator %d", g_num)
-                                      .
-                                          c_str(),
-                                  &active[g_num],
-                                  ImGuiTreeNodeFlags_DefaultOpen
-          )) {
-        ImGui::BeginTable(absl::StrFormat("table-gen-%d", g_num)
-                              .
-                                  c_str(),
-                          2);
+    memset(active, true, sizeof(active));
+    for (auto &g : generators) {
+      if (ImGui::CollapsingHeader(
+              absl::StrFormat("Generator %d", g_num).c_str(), &active[g_num],
+              ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::BeginTable(absl::StrFormat("table-gen-%d", g_num).c_str(), 2);
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
         if (ImGui::CollapsingHeader("Oscillator Parameters", nullptr)) {
@@ -185,36 +174,23 @@ void GUI::Render() {
 
         Oscillator oscillator_;
         float e_c[kAnalysisBufferSize];
-        for (
-            int i = 0;
-            i < kAnalysisBufferSize;
-            i++) {
-          e_c[i] = 1.0f;
+        for (float &i : e_c) {
+          i = 1.0f;
         }
-        oscillator_.
-            Perform(kAnalysisBufferSize,
-                    44100, c_buf_data, 440, g, e_c, e_c);
-        for (
-            int i = 0;
-            i < kAnalysisBufferSize;
-            i++) {
-          buf_data[i] = c_buf_data[i].
-              real();
+        oscillator_.Perform(kAnalysisBufferSize, 44100, c_buf_data, 440, g, e_c,
+                            e_c);
+        for (int i = 0; i < kAnalysisBufferSize; i++) {
+          buf_data[i] = c_buf_data[i].real();
         }
 
-        PlotWave(kAnalysisBufferSize, x_data, buf_data
-        );
+        PlotWave(kAnalysisBufferSize, x_data, buf_data);
         ImGui::EndTable();
       }
       g_num++;
     }
     while (num_generators--) {
       if (!active[num_generators]) {
-        generators.
-            erase(generators
-                      .
-                          begin()
-                      + num_generators);
+        patch_->RmGenerator(num_generators);
       }
     }
   }
@@ -224,28 +200,27 @@ void GUI::Render() {
 
   ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
   int display_w, display_h;
-  glfwGetFramebufferSize(window_, &display_w, &display_h
-  );
+  glfwGetFramebufferSize(window_, &display_w, &display_h);
   glViewport(0, 0, display_w, display_h);
-  glClearColor(clear_color
-                   .x, clear_color.y, clear_color.z, clear_color.w);
+  glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
   glClear(GL_COLOR_BUFFER_BIT);
 
-// If you are using this code with non-legacy OpenGL header/contexts (which
-// you should not, prefer using imgui_impl_opengl3.cpp!!), you may need to
-// backup/reset/restore current shader using the commented lines below.
-// GLint last_program;
-// glGetIntegerv(GL_CURRENT_PROGRAM, &last_program);
-// glUseProgram(0);
+  // If you are using this code with non-legacy OpenGL header/contexts (which
+  // you should not, prefer using imgui_impl_opengl3.cpp!!), you may need to
+  // backup/reset/restore current shader using the commented lines below.
+  // GLint last_program;
+  // glGetIntegerv(GL_CURRENT_PROGRAM, &last_program);
+  // glUseProgram(0);
   ImGui_ImplOpenGL2_RenderDrawData(ImGui::GetDrawData());
-// glUseProgram(last_program);
+  // glUseProgram(last_program);
 
   glfwMakeContextCurrent(window_);
   glfwSwapBuffers(window_);
 }
 
 // static
-void GUI::EnvelopeEditor(const std::string &title, GeneratorPatch::Envelope *envelope) {
+void GUI::EnvelopeEditor(const std::string &title,
+                         GeneratorPatch::Envelope *envelope) {
   if (ImGui::CollapsingHeader(title.c_str())) {
     ImGui::SliderFloat("Attack rate", &envelope->A_R, 0.0f, 10.0f, "%.3f");
     ImGui::SliderFloat("Decay rate", &envelope->D_R, 0.0f, 10.0f, "%.3f");
@@ -255,7 +230,8 @@ void GUI::EnvelopeEditor(const std::string &title, GeneratorPatch::Envelope *env
 }
 
 // static
-void GUI::PlotWave(const size_t buf_size, const float *x_data, const float *y_data1) {
+void GUI::PlotWave(const size_t buf_size, const float *x_data,
+                   const float *y_data1) {
   ImGui::PlotConfig conf;
   const float *y_data[] = {y_data1};
   ImU32 colors[3] = {ImColor(0, 255, 0)};
@@ -263,7 +239,8 @@ void GUI::PlotWave(const size_t buf_size, const float *x_data, const float *y_da
 
   conf.values.xs = x_data;
   conf.values.count = buf_size;
-  conf.values.ys_list = y_data; // use ys_list to draw several lines simultaneously
+  conf.values.ys_list =
+      y_data;  // use ys_list to draw several lines simultaneously
   conf.values.ys_count = 1;
   conf.values.colors = colors;
   conf.scale.min = -1;
@@ -280,9 +257,7 @@ void GUI::PlotWave(const size_t buf_size, const float *x_data, const float *y_da
   ImGui::Plot("plot1", conf);
 }
 
-void GUI::Wait() {
-  gui_thread_.join();
-}
+void GUI::Wait() { gui_thread_.join(); }
 
 bool GUI::Running() {
   std::lock_guard<std::mutex> lock(gui_mutex_);

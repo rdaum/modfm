@@ -6,12 +6,10 @@ namespace {
 constexpr std::complex<float> kCpi = M_PI;
 }  // namespace
 
-void Oscillator::Perform(size_t buffer_size,
-                         uint16_t sample_rate,
-                         std::complex<float> buffer[],
-                         float base_freq,
-                         const GeneratorPatch &patch,
-                         const float level_a[], const float level_k[]) {
+void Oscillator::Perform(size_t buffer_size, uint16_t sample_rate,
+                         std::complex<float> buffer[], float base_freq,
+                         const GeneratorPatch &patch, const float level_a[],
+                         const float level_k[]) {
   std::complex<float> c_sample_rate = sample_rate;
   std::complex<float> freq = base_freq * patch.C;
   std::complex<float> omega_c = 2.0f * kCpi * freq;
@@ -32,8 +30,9 @@ void Oscillator::Perform(size_t buffer_size,
     // Modulation Synthesis"
     // VICTOR LAZZARINI AND JOSEPH TIMONEY
     // https://mural.maynoothuniversity.ie/4697/1/JAES_V58_6_PG459hirez.pdf
-//    buffer[i] = patch.A * (std::exp(K * std::cos(omega_mt)) * std::cos(omega_ct));
-    buffer[i] = (A * (std::exp(patch.R * K * std::cos(omega_mt))
-        * std::cos(omega_ct + S * K * std::sin(omega_mt))));
+    //    buffer[i] = patch.A * (std::exp(K * std::cos(omega_mt)) *
+    //    std::cos(omega_ct));
+    buffer[i] = (A * (std::exp(patch.R * K * std::cos(omega_mt)) *
+                      std::cos(omega_ct + S * K * std::sin(omega_mt))));
   }
 }
