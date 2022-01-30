@@ -1,62 +1,60 @@
 #pragma once
 
+#include <functional>
 #include <mutex>
 #include <sigslot/signal.hpp>
 #include <vector>
 
 struct GeneratorPatch {
-  static GeneratorPatch Default() {
-    return {1.0,
-            0.5,
-            3.0,
-            4.0,
-            1,
-            0.0,
-            GeneratorPatch::Envelope{0.025, 0.175, 0.25, 0.75},
-            GeneratorPatch::Envelope{0.05, 0.33, 0.25, 0.5}};
-  }
-  float C, A, M, K, R, S;
+ public:
+  GeneratorPatch(float ratio, float amplitude);
 
+  struct Osc {
+    float C, A, M, K, R, S;
+
+    bool operator==(const Osc &rhs) const;
+  };
   struct Envelope {
     float A_R;  // attack rate
     float A_L;  // attack peak level
     float D_R;  // decay rate
     float S_L;  // sustain level
     float R_R;  // release rate
-
-    bool operator==(const Envelope &rhs) const {
-      return A_R == rhs.A_R && A_L == rhs.A_L && D_R == rhs.D_R &&
-             S_L == rhs.S_L && R_R == rhs.R_R;
-    }
+    bool operator==(const Envelope &rhs) const;
   };
-  Envelope A_ENV;
-  Envelope K_ENV;
+  GeneratorPatch(const Osc &osc, const Envelope &a_env, const Envelope &k_env);
 
-  bool operator==(const GeneratorPatch &rhs) const {
-    return C == rhs.C && A == rhs.A && M == rhs.M && K == rhs.K && R == rhs.R &&
-           S == rhs.S && A_ENV == rhs.A_ENV && K_ENV == rhs.K_ENV;
-  }
+  bool operator==(const GeneratorPatch &rhs) const;
+
+  void WithLock(
+      std::function<void(const Osc &, const Envelope &, const Envelope &)> f)
+      const;
+
+  void Update(std::optional<Osc> osc, std::optional<Envelope> a_env,
+              std::optional<Envelope> k_env);
+
+ private:
+  mutable std::mutex gp_mutex_;
+
+  Osc osc_;
+  Envelope a_env_;
+  Envelope k_env_;
 };
 
-struct Patch {
-  std::vector<GeneratorPatch> generators;
-
+class Patch {
+ public:
+  GeneratorPatch *AddGenerator();
+  void RmGenerator(GeneratorPatch *patch);
   sigslot::signal<GeneratorPatch *> AddGeneratorSignal;
-  sigslot::signal<int> RmGeneratorSignal;
+  sigslot::signal<GeneratorPatch *, int> RmGeneratorSignal;
 
-  GeneratorPatch *AddGenerator() {
-    generators.push_back(GeneratorPatch::Default());
-    GeneratorPatch *n_gp = &generators.back();
-    AddGeneratorSignal(n_gp);
-    return n_gp;
-  }
+  std::vector<const GeneratorPatch *> generators() const;
 
-  void RmGenerator(int index) {
-    generators.erase(generators.begin() + index);
-    RmGeneratorSignal(index);
-  }
-
-  bool operator==(const Patch &rhs) const {
-    return generators == rhs.generators;
-  }
+ private:
+  mutable std::mutex patches_mutex_;
+  std::vector<std::unique_ptr<GeneratorPatch>> generators_;
 };
+
+constexpr GeneratorPatch::Envelope kDefaultAmpEnvelope{0.025, 0.175, 0.25,
+                                                       0.75};
+constexpr GeneratorPatch::Envelope kDefaultCarEnvelope{0.05, 0.33, 0.25, 0.5};

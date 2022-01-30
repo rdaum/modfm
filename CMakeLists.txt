@@ -6,6 +6,7 @@ HunterGate(
 )
 project(modfm)
 
+include(FetchContent)
 hunter_add_package(gflags)
 find_package(gflags CONFIG REQUIRED)
 
@@ -27,51 +28,42 @@ set(CMAKE_CXX_STANDARD 20)
 
 set(CMAKE_CXX_FLAGS_RELEASE "-Ofast")
 
-set(IMGUI_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/imgui)
-add_library(IMGUI STATIC)
-
-target_sources(IMGUI
-        PRIVATE
-        ${IMGUI_DIR}/imgui_demo.cpp
-        ${IMGUI_DIR}/imgui_draw.cpp
-        ${IMGUI_DIR}/imgui_tables.cpp
-        ${IMGUI_DIR}/imgui_widgets.cpp
-        ${IMGUI_DIR}/imgui.cpp
-
-        PRIVATE
-        ${IMGUI_DIR}/backends/imgui_impl_glfw.cpp
-        ${IMGUI_DIR}/backends/imgui_impl_opengl2.cpp
-        )
-
-target_include_directories(IMGUI
-        PUBLIC ${IMGUI_DIR}
-        PUBLIC ${IMGUI_DIR}/backends
-        )
-find_package(OpenGL REQUIRED)
-target_link_libraries(IMGUI PUBLIC ${OPENGL_LIBRARIES})
-
-
 add_executable(modfm src/main.cc
-        src/gui.cc
         src/oscillator.h
         src/oscillator.cc
         src/player.h
         src/player.cc
         src/patch.h
+        src/patch.cc
         src/midi.h
         src/midi.cc
         src/envgen.h
+        src/ui/patch_editor.h
+        src/ui/patch_editor.cc
+        src/ui/drawbars.h
+        src/ui/drawbars.cc
+        src/ui/device_selector.h
+        src/ui/device_selector.cc
+        src/ui/gui.h
+        src/ui/gui.cc
         src/envgen.cc)
 
+set(EXTERNAL_INSTALL_LOCATION ${CMAKE_BINARY_DIR}/external)
+
+FetchContent_Declare(
+        nanogui
+        GIT_REPOSITORY https://github.com/mitsuba-renderer/nanogui.git
+)
+FetchContent_MakeAvailable(nanogui)
+
 add_subdirectory(third_party/abseil-cpp)
-include_directories(${IMGUI_DIR})
-add_subdirectory(third_party/imgui-plot)
 add_subdirectory(third_party/portaudio)
 add_subdirectory(third_party/portmidi)
 add_subdirectory(third_party/sigslot)
 
+
 target_include_directories(modfm PRIVATE
-        third_party/imgui-plot/include
+        src/
         third_party/sigslot
         third_party/portaudio/include
         third_party/portmidi/porttime
@@ -84,13 +76,12 @@ endif ()
 
 target_link_libraries(modfm
         ${PLATFORM_LIBRARIES}
-        IMGUI
         glog::glog
         gflags
         glfw
         pulse-simple
-        imgui_plot
         PortAudio
         Pal::Sigslot
         portmidi
+        nanogui
         absl::statusor)

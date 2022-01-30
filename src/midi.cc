@@ -71,8 +71,8 @@ absl::Status MIDIReceiver::Start() {
 
   LOG(INFO) << "Starting MIDI receiver...";
 
+  running_ = true;
   receive_thread_ = std::thread([this] {
-    running_ = true;
     /* empty buffer before starting */
     PmEvent buffer[256];
     while (Pm_Poll(midi_stream_)) {

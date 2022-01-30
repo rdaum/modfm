@@ -14,7 +14,7 @@ class GUI;
 
 class Generator {
  public:
-  Generator(const GeneratorPatch *patch, int sample_frequency);
+  explicit Generator(int sample_frequency);
 
   void Perform(const GeneratorPatch &patch, std::complex<float> *out_buffer,
                float base_freq, unsigned long frames_per_buffer);
@@ -33,7 +33,7 @@ class Generator {
 
 class Player {
  public:
-  Player(Patch *g_patch, int num_voices, int sample_frequency);
+  Player(Patch *gennum, int num_voices, int sample_frequency);
 
   int Perform(const void *in_buffer, void *out_buffer,
               unsigned long frames_per_buffer,
