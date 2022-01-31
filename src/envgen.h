@@ -10,7 +10,7 @@ class EnvelopeGenerator {
       : minimum_level_(0.0001),
         stage_(ENVELOPE_STAGE_OFF),
         current_level_(minimum_level_),
-        multiplier_(1.0),
+        coefficient_(1.0),
         sample_rate_(sample_rate),
         current_sample_index_(0),
         next_stage_sample_index_(0){};
@@ -23,20 +23,23 @@ class EnvelopeGenerator {
     ENVELOPE_STAGE_RELEASE,
     kNumEnvelopeStages
   };
+
   void EnterStage(EnvelopeStage new_stage,
                   const GeneratorPatch::Envelope &envelope);
   float NextSample(const GeneratorPatch::Envelope &env);
   void SetSampleRate(float newSampleRate);
   inline EnvelopeStage Stage() const { return stage_; };
-  const float minimum_level_;
+
+  bool Playing() const { return stage_ != ENVELOPE_STAGE_OFF; };
 
  private:
-  void CalculateMultiplier(float start_level, float end_level,
-                           unsigned long long length_in_samples);
+  const float minimum_level_;
+  float CalculateCoefficient(float start_level, float end_level,
+                             size_t length_in_samples) const;
   EnvelopeStage stage_;
   float current_level_;
-  float multiplier_;
+  float coefficient_;
   float sample_rate_;
-  unsigned long long current_sample_index_;
-  unsigned long long next_stage_sample_index_;
+  size_t current_sample_index_;
+  size_t next_stage_sample_index_;
 };

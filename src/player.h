@@ -24,6 +24,10 @@ class Generator {
 
   void NoteOff(const GeneratorPatch &patch, uint8_t note);
 
+  bool Playing() const;
+
+  void Stop();
+
  private:
   const int sample_frequency_;
   EnvelopeGenerator e_a_;
@@ -47,11 +51,12 @@ class Player {
  private:
   struct Voice {
     std::vector<std::unique_ptr<Generator>> generators_;
-    bool on;
     int32_t on_time;
     uint8_t note;
     float velocity;
     float base_freq;
+
+    bool Playing() const;
   };
   Voice *NewVoice();
   Voice *VoiceFor(uint8_t note);

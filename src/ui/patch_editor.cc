@@ -25,18 +25,20 @@ GeneratorPatchEditor::GeneratorPatchEditor(nanogui::Widget *parent, int barnum,
   auto *a_env_params = new Widget(this);
   a_env_params->set_layout(
       new GridLayout(Orientation::Horizontal, 3, Alignment::Fill));
-  NumericValueSliderEdit(a_env_params, "A", &patch_model_->a_env.A_R, 10);
-  NumericValueSliderEdit(a_env_params, "D", &patch_model_->a_env.D_R, 10);
+  NumericValueSliderEdit(a_env_params, "AR", &patch_model_->a_env.A_R, 5);
+  NumericValueSliderEdit(a_env_params, "AL", &patch_model_->a_env.A_L, 1);
+  NumericValueSliderEdit(a_env_params, "D", &patch_model_->a_env.D_R, 5);
   NumericValueSliderEdit(a_env_params, "S", &patch_model_->a_env.S_L, 1);
-  NumericValueSliderEdit(a_env_params, "R", &patch_model_->a_env.R_R, 10);
+  NumericValueSliderEdit(a_env_params, "R", &patch_model_->a_env.R_R, 5);
   new Label(this, "Modulator envelope");
   auto *k_env_params = new Widget(this);
   k_env_params->set_layout(
       new GridLayout(Orientation::Horizontal, 3, Alignment::Fill));
-  NumericValueSliderEdit(k_env_params, "A", &patch_model_->k_env.A_R, 10);
-  NumericValueSliderEdit(k_env_params, "D", &patch_model_->k_env.D_R, 10);
+  NumericValueSliderEdit(k_env_params, "AR", &patch_model_->k_env.A_R, 5);
+  NumericValueSliderEdit(k_env_params, "AL", &patch_model_->k_env.A_L, 1);
+  NumericValueSliderEdit(k_env_params, "D", &patch_model_->k_env.D_R, 5);
   NumericValueSliderEdit(k_env_params, "S", &patch_model_->k_env.S_L, 1);
-  NumericValueSliderEdit(k_env_params, "R", &patch_model_->k_env.R_R, 10);
+  NumericValueSliderEdit(k_env_params, "R", &patch_model_->k_env.R_R, 5);
 }
 
 void GeneratorPatchEditor::set_changed_callback(
