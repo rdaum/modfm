@@ -2,9 +2,8 @@
 
 #include <glog/logging.h>
 
-constexpr const char *kStageLabels[] {
-  "OFF", "ATTACK", "DECAY", "SUSTAIN", "RELEASE"
-};
+constexpr const char *kStageLabels[]{"OFF", "ATTACK", "DECAY", "SUSTAIN",
+                                     "RELEASE"};
 
 // originally based on
 // http://www.martin-finke.de/blog/articles/audio-plugins-011-envelopes/
@@ -16,7 +15,8 @@ float EnvelopeGenerator::NextSample(const GeneratorPatch::Envelope &env) {
     if (current_sample_index_ == next_stage_sample_index_) {
       auto new_stage =
           static_cast<EnvelopeStage>((stage_ + 1) % kNumEnvelopeStages);
-      LOG(INFO) << current_sample_index_ << ": " << kStageLabels[stage_] << " => " << kStageLabels[new_stage];
+      LOG(INFO) << current_sample_index_ << ": " << kStageLabels[stage_]
+                << " => " << kStageLabels[new_stage];
       EnterStage(new_stage, env);
     }
     current_level_ *= coefficient_;
@@ -41,7 +41,8 @@ void EnvelopeGenerator::EnterStage(EnvelopeStage new_stage,
   if (stage_ != ENVELOPE_STAGE_OFF && stage_ != ENVELOPE_STAGE_SUSTAIN) {
     next_stage_sample_index_ = stage_rates_[stage_] * sample_rate_;
   }
-  LOG(INFO) << current_sample_index_ << " : Stage: " << kStageLabels[stage_] << " until " << stage_rates_[stage_];
+  LOG(INFO) << current_sample_index_ << " : Stage: " << kStageLabels[stage_]
+            << " until " << stage_rates_[stage_];
   switch (new_stage) {
     case ENVELOPE_STAGE_OFF:
       current_level_ = 0.0;
