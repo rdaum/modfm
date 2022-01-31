@@ -10,10 +10,13 @@
 #include "oscillator.h"
 
 namespace {
-float NoteToFreq(int note) {
-  float a = 440;  // frequency of A (coomon value is 440Hz)
-  return (a / 32.0f) * std::pow(2, ((note - 9.0f) / 12.0f));
+
+constexpr float kNoteConversionMultiplier = 440.0f/32.0f;
+
+float NoteToFreq(float note) {
+  return kNoteConversionMultiplier * std::pow(2.0f, ((note - 9.0f) / 12.0f));
 }
+
 }  // namespace
 
 Player::Player(Patch *patch, int num_voices, int sample_frequency)
