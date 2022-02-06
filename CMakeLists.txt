@@ -45,7 +45,7 @@ target_include_directories(modfmlib
         $<INSTALL_INTERFACE:include/modfm>  # <prefix>/include/modfm
 )
 
-target_link_libraries(modfmlib PRIVATE
+target_link_libraries(modfmlib PUBLIC
         Pal::Sigslot
         absl::statusor
         glog::glog)
