@@ -32,22 +32,31 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(sigslot)
 
-
 add_library(
         modfmlib
         STATIC
-        src/oscillator.h
         src/oscillator.cc
-        src/player.h
         src/player.cc
-        src/patch.h
         src/patch.cc
-        src/envgen.h
         src/envgen.cc)
+target_include_directories(modfmlib
+        PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/modfm>
+        $<INSTALL_INTERFACE:include/modfm>  # <prefix>/include/modfm
+)
+
 target_link_libraries(modfmlib PRIVATE
         Pal::Sigslot
         absl::statusor
         glog::glog)
+
+install(TARGETS modfmlib
+        EXPORT modfmlibTargets
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+        INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
 
 option(MODFM_BUILD_UI "Build example UI" OFF)
 if (MODFM_BUILD_UI)
