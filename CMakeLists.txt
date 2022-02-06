@@ -4,18 +4,12 @@ project(modfm)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(ABSL_PROPAGATE_CXX_STD ON)
 
 set(CMAKE_CXX_FLAGS_RELEASE "-Ofast")
 
 # Third party packages are pulled in via FetchContent
 include(FetchContent)
-
-# Gflags
-FetchContent_Declare(
-        gflags
-        GIT_REPOSITORY https://github.com/gflags/gflags.git
-)
-FetchContent_MakeAvailable(gflags)
 
 # Glog
 FetchContent_Declare(
@@ -41,6 +35,7 @@ FetchContent_MakeAvailable(sigslot)
 
 add_library(
         modfmlib
+        STATIC
         src/oscillator.h
         src/oscillator.cc
         src/player.h
@@ -52,14 +47,19 @@ add_library(
 target_link_libraries(modfmlib PRIVATE
         Pal::Sigslot
         absl::statusor
-        glog::glog
-        gflags)
+        glog::glog)
 
 option(MODFM_BUILD_UI "Build example UI" OFF)
 if (MODFM_BUILD_UI)
-
     set(OpenGL_GL_PREFERENCE GLVND)
     find_package(OpenGL REQUIRED)
+
+    # Gflags
+    FetchContent_Declare(
+            gflags
+            GIT_REPOSITORY https://github.com/gflags/gflags.git
+    )
+    FetchContent_MakeAvailable(gflags)
 
     # PortAudio
     FetchContent_Declare(
