@@ -6,6 +6,9 @@
 #include <csignal>
 #include <unordered_map>
 
+#include <portaudio.h>
+#include <porttime.h>
+
 #include "midi.h"
 #include "player.h"
 #include "ui/gui.h"
@@ -47,7 +50,7 @@ int pa_output_callback(const void *in_buffer, void *out_buffer,
 int main(int argc, char *argv[]) {
   FLAGS_logtostderr = true;
   google::InitGoogleLogging(argv[0]);
-  google::ParseCommandLineFlags(&argc, &argv, false);
+  gflags::ParseCommandLineFlags(&argc, &argv, false);
 
   glfwInit();
 

@@ -3,7 +3,7 @@
 #include "absl/strings/str_format.h"
 #include "glog/logging.h"
 
-#include "../player.h"
+#include "player.h"
 
 std::vector<std::pair<PmDeviceID, const PmDeviceInfo *>>
 MIDIReceiver::ListDevices() const {

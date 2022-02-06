@@ -1,6 +1,12 @@
 cmake_minimum_required(VERSION 3.21)
 project(modfm)
 
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+set(CMAKE_CXX_FLAGS_RELEASE "-Ofast")
+
 # Third party packages are pulled in via FetchContent
 include(FetchContent)
 
@@ -32,12 +38,6 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(sigslot)
 
-# Add our local cmake dir.
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
-
-set(CMAKE_CXX_STANDARD 20)
-
-set(CMAKE_CXX_FLAGS_RELEASE "-Ofast")
 
 add_library(
         modfmlib
@@ -57,6 +57,7 @@ target_link_libraries(modfmlib PRIVATE
 
 option(MODFM_BUILD_UI "Build example UI" OFF)
 if (MODFM_BUILD_UI)
+
     set(OpenGL_GL_PREFERENCE GLVND)
     find_package(OpenGL REQUIRED)
 
@@ -65,14 +66,24 @@ if (MODFM_BUILD_UI)
             portaudio
             GIT_REPOSITORY https://github.com/PortAudio/portaudio.git
     )
-    FetchContent_MakeAvailable(portaudio)
+    if(NOT portaudio_POPULATED)
+        FetchContent_Populate(portaudio)
+        add_subdirectory(${portaudio_SOURCE_DIR})
+        include_directories(${portaudio_SOURCE_DIR}/include)
+        include_directories(${portaudio_SOURCE_DIR}/include)
+    endif()
 
     # PortMidi
     FetchContent_Declare(
             portmidi
             GIT_REPOSITORY https://github.com/PortMidi/portmidi.git
     )
-    FetchContent_MakeAvailable(portmidi)
+    if(NOT portmidi_POPULATED)
+        FetchContent_Populate(portmidi)
+        add_subdirectory(${portmidi_SOURCE_DIR})
+        include_directories(${portmidi_SOURCE_DIR}/pm_common)
+        include_directories(${portmidi_SOURCE_DIR}/porttime)
+    endif()
 
     # Nanogui
     option(NANOGUI_BUILD_PYTHON "" OFF)
@@ -109,12 +120,15 @@ if (MODFM_BUILD_UI)
 
     target_link_libraries(modfm
             modfmlib
+            absl::utility
+            absl::statusor
             ${PLATFORM_LIBRARIES}
             glog::glog
             gflags
             glfw
             pulse-simple
+            portmidi
+            PortAudio
             Pal::Sigslot
-            nanogui
-            absl::statusor)
+            nanogui)
 endif ()
