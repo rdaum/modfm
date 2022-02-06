@@ -1,10 +1,10 @@
 #pragma once
 
-#include <absl/status/statusor.h>
+#include "absl/status/statusor.h"
 #include <portmidi.h>
 
 #include <atomic>
-#include <sigslot/signal.hpp>
+#include "sigslot/signal.hpp"
 #include <thread>
 
 class MIDIReceiver {

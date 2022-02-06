@@ -1,9 +1,10 @@
 #include "oscillator.h"
 
 #include <cmath>
+#include <numbers>
 
 namespace {
-constexpr std::complex<float> kCpi = M_PI;
+constexpr std::complex<float> kCpi = std::numbers::pi;
 }  // namespace
 
 void Oscillator::Perform(size_t buffer_size, uint16_t sample_rate,

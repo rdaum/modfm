@@ -1,9 +1,5 @@
 #pragma once
 
-#include <portaudio.h>
-#include <portmidi.h>
-#include <porttime.h>
-
 #include <mutex>
 #include <vector>
 
@@ -13,13 +9,13 @@
 class GUI;
 
 class Generator {
- public:
+public:
   explicit Generator(int sample_frequency);
 
   void Perform(const GeneratorPatch &patch, std::complex<float> *out_buffer,
-               float base_freq, unsigned long frames_per_buffer);
+               float base_freq, size_t frames_per_buffer);
 
-  void NoteOn(const GeneratorPatch &patch, PmTimestamp ts, uint8_t velocity,
+  void NoteOn(const GeneratorPatch &patch, unsigned long ts, uint8_t velocity,
               uint8_t note);
 
   void NoteOff(const GeneratorPatch &patch, uint8_t note);
@@ -28,7 +24,7 @@ class Generator {
 
   void Stop();
 
- private:
+private:
   const int sample_frequency_;
   EnvelopeGenerator e_a_;
   EnvelopeGenerator e_k_;
@@ -36,19 +32,17 @@ class Generator {
 };
 
 class Player {
- public:
+public:
   Player(Patch *gennum, int num_voices, int sample_frequency);
 
-  int Perform(const void *in_buffer, void *out_buffer,
-              unsigned long frames_per_buffer,
-              const PaStreamCallbackTimeInfo *time_info,
-              PaStreamCallbackFlags status_flags);
+  bool Perform(const void *in_buffer, void *out_buffer,
+               size_t frames_per_buffer);
 
-  void NoteOn(PmTimestamp ts, uint8_t velocity, uint8_t note);
+  void NoteOn(unsigned long ts, uint8_t velocity, uint8_t note);
 
   void NoteOff(uint8_t note);
 
- private:
+private:
   struct Voice {
     std::vector<std::unique_ptr<Generator>> generators_;
     int32_t on_time;

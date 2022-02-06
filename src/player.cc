@@ -17,11 +17,10 @@ float NoteToFreq(float note) {
   return kNoteConversionMultiplier * std::pow(2.0f, ((note - 9.0f) / 12.0f));
 }
 
-}  // namespace
+} // namespace
 
 Player::Player(Patch *patch, int num_voices, int sample_frequency)
-    : patch_(patch),
-      num_voices_(num_voices),
+    : patch_(patch), num_voices_(num_voices),
       sample_frequency_(sample_frequency) {
   std::vector<const GeneratorPatch *> generators = patch_->generators();
 
@@ -50,10 +49,8 @@ Player::Player(Patch *patch, int num_voices, int sample_frequency)
   });
 }
 
-int Player::Perform(const void *in_buffer, void *out_buffer,
-                    unsigned long frames_per_buffer,
-                    const PaStreamCallbackTimeInfo *time_info,
-                    PaStreamCallbackFlags status_flags) {
+bool Player::Perform(const void *in_buffer, void *out_buffer,
+                     size_t frames_per_buffer) {
   memset(out_buffer, 0, frames_per_buffer * sizeof(float));
 
   std::mutex buffer_mutex;
@@ -70,7 +67,8 @@ int Player::Perform(const void *in_buffer, void *out_buffer,
           // Probably faster without the branch in a loop...
           for (int g_num = 0; g_num < voice.generators_.size(); g_num++) {
             auto &g = voice.generators_[g_num];
-            if (!g->Playing()) continue;
+            if (!g->Playing())
+              continue;
             auto mix_buffer =
                 std::make_unique<std::complex<float>[]>(frames_per_buffer);
             g->Perform(*g_patches[g_num], mix_buffer.get(), voice.base_freq,
@@ -85,7 +83,7 @@ int Player::Perform(const void *in_buffer, void *out_buffer,
 
   // Mix down.
   if (!mix_buffers.empty()) {
-    std::complex<float> mix_buffer[frames_per_buffer];
+    std::vector<std::complex<float>> mix_buffer(frames_per_buffer, 0.0f);
     for (auto &v_buffer : mix_buffers) {
       if (v_buffer)
         for (int i = 0; i < frames_per_buffer; i++) {
@@ -98,14 +96,15 @@ int Player::Perform(const void *in_buffer, void *out_buffer,
       f_buffer[i] = mix_buffer[i].real();
     }
   }
-  return paContinue;
+  return true;
 }
 
-void Player::NoteOn(PmTimestamp ts, uint8_t velocity, uint8_t note) {
+void Player::NoteOn(unsigned long ts, uint8_t velocity, uint8_t note) {
   std::lock_guard<std::mutex> player_lock(voices_mutex_);
 
   // A note with no velocity is not a note at all.
-  if (!velocity) return;
+  if (!velocity)
+    return;
 
   float base_freq = NoteToFreq(note);
   float vel = (float)velocity / 80;
@@ -145,11 +144,12 @@ void Player::NoteOff(uint8_t note) {
 
 Player::Voice *Player::NewVoice() {
   for (auto &v : voices_) {
-    if (!v.Playing()) return &v;
+    if (!v.Playing())
+      return &v;
   }
 
   // No free voice? Find the one with the lowest timestamp and steal it.
-  PmTimestamp least_ts = INT_MAX;
+  unsigned long least_ts = INT_MAX;
   int stolen_voice_num = -1;
   for (int i = 0; i < num_voices_; i++) {
     if (voices_[i].on_time < least_ts) {
@@ -168,54 +168,56 @@ Player::Voice *Player::NewVoice() {
 
 Player::Voice *Player::VoiceFor(uint8_t note) {
   for (auto &v : voices_) {
-    if (v.note == note && v.Playing()) return &v;
+    if (v.note == note && v.Playing())
+      return &v;
   }
   return nullptr;
 }
 
 bool Player::Voice::Playing() const {
   for (const auto &g : generators_) {
-    if (g->Playing()) return true;
+    if (g->Playing())
+      return true;
   }
   return false;
 }
 
 Generator::Generator(int sample_frequency)
-    : sample_frequency_(sample_frequency),
-      e_a_(sample_frequency),
+    : sample_frequency_(sample_frequency), e_a_(sample_frequency),
       e_k_(sample_frequency) {}
 
 void Generator::Perform(const GeneratorPatch &patch,
                         std::complex<float> *out_buffer, float base_freq,
-                        unsigned long frames_per_buffer) {
-  float level_a[frames_per_buffer];
-  float level_k[frames_per_buffer];
-  float level_c[frames_per_buffer];
-  float level_r[frames_per_buffer];
-  float level_s[frames_per_buffer];
-  float level_m[frames_per_buffer];
+                        size_t frames_per_buffer) {
+  std::vector<float> level_a(frames_per_buffer, 0.0f);
+  std::vector<float> level_k(frames_per_buffer, 0.0f);
+  std::vector<float> level_c(frames_per_buffer, 0.0f);
+  std::vector<float> level_r(frames_per_buffer, 0.0f);
+  std::vector<float> level_s(frames_per_buffer, 0.0f);
+  std::vector<float> level_m(frames_per_buffer, 0.0f);
 
   patch.WithLock([&level_c, &level_m, &level_s, &level_r, &level_k, &level_a,
                   this,
                   &frames_per_buffer](const GeneratorPatch::Osc &osc,
                                       const GeneratorPatch::Envelope &a_env,
                                       const GeneratorPatch::Envelope &k_env) {
-    std::fill(level_c, level_c + frames_per_buffer, osc.C);
-    std::fill(level_r, level_r + frames_per_buffer, osc.R);
-    std::fill(level_s, level_s + frames_per_buffer, osc.S);
-    std::fill(level_m, level_m + frames_per_buffer, osc.M);
-    std::fill(level_a, level_a + frames_per_buffer, osc.A);
-    std::fill(level_k, level_k + frames_per_buffer, osc.K);
+    std::fill(level_c.begin(), level_c.begin() + frames_per_buffer, osc.C);
+    std::fill(level_r.begin(), level_r.begin() + frames_per_buffer, osc.R);
+    std::fill(level_s.begin(), level_s.begin() + frames_per_buffer, osc.S);
+    std::fill(level_m.begin(), level_m.begin() + frames_per_buffer, osc.M);
+    std::fill(level_a.begin(), level_a.begin() + frames_per_buffer, osc.A);
+    std::fill(level_k.begin(), level_k.begin() + frames_per_buffer, osc.K);
     for (int i = 0; i < frames_per_buffer; i++) {
       level_a[i] *= e_a_.NextSample(a_env);
       level_k[i] *= e_k_.NextSample(k_env);
     }
   });
   o_.Perform(frames_per_buffer, sample_frequency_, out_buffer, base_freq,
-             level_a, level_c, level_m, level_r, level_s, level_k);
+             level_a.data(), level_c.data(), level_m.data(), level_r.data(),
+             level_s.data(), level_k.data());
 }
 
-void Generator::NoteOn(const GeneratorPatch &patch, PmTimestamp ts,
+void Generator::NoteOn(const GeneratorPatch &patch, unsigned long ts,
                        uint8_t velocity, uint8_t note) {
   patch.WithLock([this](const GeneratorPatch::Osc &osc,
                         const GeneratorPatch::Envelope &a_env,

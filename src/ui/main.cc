@@ -40,8 +40,8 @@ int pa_output_callback(const void *in_buffer, void *out_buffer,
   if (status_flags != 0) {
     LOG(ERROR) << "Status: " << status_flags;
   }
-  return player->Perform(in_buffer, out_buffer, frames_per_buffer, time_info,
-                         status_flags);
+  player->Perform(in_buffer, out_buffer, frames_per_buffer);
+  return paContinue;
 }
 
 int main(int argc, char *argv[]) {
